@@ -32,9 +32,17 @@ namespace DesktopKit.FolderRename
         public MainForm()
         {
             ComponentName = "FolderRename";
+            LoadIcon();
             InitializeControls();
             WireEvents();
             UpdateMethodPanels();
+        }
+
+        private void LoadIcon()
+        {
+            var iconPath = Path.Combine(AppContext.BaseDirectory, "FolderRename.ico");
+            if (File.Exists(iconPath))
+                Icon = new Icon(iconPath);
         }
 
         private void InitializeControls()

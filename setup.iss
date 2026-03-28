@@ -12,13 +12,16 @@ Compression=lzma2
 SolidCompression=yes
 ArchitecturesInstallIn64BitMode=x64compatible
 UninstallDisplayName=FolderRename
+SetupIconFile=_works\FolderRename.ico
+UninstallDisplayIcon={app}\FolderRename.ico
 
 [Files]
 Source: "publish\DesktopKit.FolderRename.exe"; DestDir: "{app}"; DestName: "FolderRename.exe"; Flags: ignoreversion
 Source: "publish\*.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "ご利用ガイド.txt"; DestDir: "{app}"; Flags: ignoreversion
+Source: "_works\FolderRename.ico"; DestDir: "{app}"; Flags: ignoreversion
 ; pdbは含めない
 
 [Icons]
-Name: "{group}\FolderRename"; Filename: "{app}\FolderRename.exe"
+Name: "{group}\FolderRename"; Filename: "{app}\FolderRename.exe"; IconFilename: "{app}\FolderRename.ico"
 Name: "{group}\アンインストール"; Filename: "{uninstallexe}"
