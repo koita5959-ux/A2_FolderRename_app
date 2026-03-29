@@ -29,6 +29,33 @@ namespace DesktopKit.FolderRename
             return result;
         }
 
+        public List<(string oldName, string newName)> FindDuplicates(
+            List<(string oldName, string newName)> plan,
+            List<string> excludedFiles)
+        {
+            var duplicates = new List<(string oldName, string newName)>();
+            var newNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var excludedSet = new HashSet<string>(excludedFiles, StringComparer.OrdinalIgnoreCase);
+
+            foreach (var entry in plan)
+            {
+                // リネーム対象外ファイルとの重複チェック
+                if (excludedSet.Contains(entry.newName))
+                {
+                    duplicates.Add(entry);
+                    continue;
+                }
+
+                // プラン内での重複チェック（同じnewNameが2回以上出現）
+                if (!newNames.Add(entry.newName))
+                {
+                    duplicates.Add(entry);
+                }
+            }
+
+            return duplicates;
+        }
+
         public void Execute(string folderPath, List<(string oldName, string newName)> plan,
             Action<int, int>? onProgress = null)
         {

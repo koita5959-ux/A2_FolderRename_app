@@ -14,11 +14,11 @@ if errorlevel 1 goto :error
 echo.
 echo === ZIP パック作成 ===
 cd %~dp0
-powershell -NoProfile -Command "Compress-Archive -Path 'installer\FolderRename_Setup_v1.01.exe','ご利用ガイド.txt' -DestinationPath 'FolderRename1.01_installer.zip' -Force"
+powershell -NoProfile -Command "Compress-Archive -Path 'installer\FolderRename_Setup_v1.02.exe','ご利用ガイド.txt' -DestinationPath 'FolderRename1.02_installer.zip' -Force"
 if errorlevel 1 goto :error
 
 echo.
-echo 完了しました。FolderRename1.01_installer.zip を作成しました。
+echo 完了しました。FolderRename1.02_installer.zip を作成しました。
 pause
 exit /b 0
 

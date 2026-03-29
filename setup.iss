@@ -1,12 +1,12 @@
 [Setup]
 AppName=FolderRename
-AppVersion=1.01
+AppVersion=1.02
 AppPublisher=Media House
 AppPublisherURL=https://app.media-house.jp/
 AppSupportURL=https://app.media-house.jp/
 DefaultDirName={autopf}\FolderRename
 DefaultGroupName=FolderRename
-OutputBaseFilename=FolderRename_Setup_v1.01
+OutputBaseFilename=FolderRename_Setup_v1.02
 OutputDir=installer
 Compression=lzma2
 SolidCompression=yes

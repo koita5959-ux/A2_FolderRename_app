@@ -23,6 +23,8 @@ namespace DesktopKit.FolderRename
         private DataGridView dgvPreview = null!;
         private Button btnExecute = null!;
         private Button btnUndo = null!;
+        private Button btnSelectAll = null!;
+        private Button btnDeselectAll = null!;
 
         private readonly RenameEngine _engine = new();
         private readonly RenameHistory _history = new();
@@ -148,6 +150,20 @@ namespace DesktopKit.FolderRename
                 Height = 35
             };
 
+            btnSelectAll = new Button
+            {
+                Text = "全選択",
+                Size = new Size(80, 28),
+                Location = new Point(10, 3)
+            };
+
+            btnDeselectAll = new Button
+            {
+                Text = "全解除",
+                Size = new Size(80, 28),
+                Location = new Point(95, 3)
+            };
+
             btnPreview = new Button
             {
                 Text = "プレビュー",
@@ -156,20 +172,33 @@ namespace DesktopKit.FolderRename
             };
             btnPreview.Location = new Point(previewPanel.ClientSize.Width - btnPreview.Width - 10, 3);
 
+            previewPanel.Controls.Add(btnSelectAll);
+            previewPanel.Controls.Add(btnDeselectAll);
             previewPanel.Controls.Add(btnPreview);
 
             // --- 中央: DataGridView ---
             dgvPreview = new DataGridView
             {
                 Dock = DockStyle.Fill,
-                ReadOnly = true,
                 AllowUserToAddRows = false,
                 AllowUserToDeleteRows = false,
                 SelectionMode = DataGridViewSelectionMode.FullRowSelect,
                 AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
             };
+            var chkCol = new DataGridViewCheckBoxColumn
+            {
+                Name = "Select",
+                HeaderText = "対象",
+                Width = 50,
+                AutoSizeMode = DataGridViewAutoSizeColumnMode.None,
+                FalseValue = false,
+                TrueValue = true
+            };
+            dgvPreview.Columns.Add(chkCol);
             dgvPreview.Columns.Add("Before", "変更前");
+            dgvPreview.Columns["Before"]!.ReadOnly = true;
             dgvPreview.Columns.Add("After", "変更後");
+            dgvPreview.Columns["After"]!.ReadOnly = true;
 
             // --- 下部パネル: 実行 + 元に戻す（中央揃え） ---
             var bottomPanel = new Panel
@@ -218,6 +247,8 @@ namespace DesktopKit.FolderRename
             cmbFileType.SelectedIndexChanged += CmbFileType_SelectedIndexChanged;
             rbWordSequence.CheckedChanged += (s, e) => UpdateMethodPanels();
             rbReplace.CheckedChanged += (s, e) => UpdateMethodPanels();
+            btnSelectAll.Click += (s, e) => SetAllCheckboxes(true);
+            btnDeselectAll.Click += (s, e) => SetAllCheckboxes(false);
             btnPreview.Click += BtnPreview_Click;
             btnExecute.Click += BtnExecute_Click;
             btnUndo.Click += BtnUndo_Click;
@@ -273,7 +304,7 @@ namespace DesktopKit.FolderRename
 
             foreach (var file in files)
             {
-                dgvPreview.Rows.Add(file, "");
+                dgvPreview.Rows.Add(true, file, "");
             }
 
             StatusHelper.ShowInfo(StatusLabel, $"{files.Count}件のファイルを検出しました");
@@ -291,6 +322,41 @@ namespace DesktopKit.FolderRename
             return files;
         }
 
+        private List<string> GetCheckedFileList()
+        {
+            var files = new List<string>();
+            foreach (DataGridViewRow row in dgvPreview.Rows)
+            {
+                bool isChecked = row.Cells["Select"].Value is true;
+                var val = row.Cells["Before"].Value?.ToString();
+                if (isChecked && !string.IsNullOrEmpty(val))
+                    files.Add(val);
+            }
+            return files;
+        }
+
+        private List<string> GetUncheckedFileList()
+        {
+            var files = new List<string>();
+            foreach (DataGridViewRow row in dgvPreview.Rows)
+            {
+                bool isChecked = row.Cells["Select"].Value is true;
+                var val = row.Cells["Before"].Value?.ToString();
+                if (!isChecked && !string.IsNullOrEmpty(val))
+                    files.Add(val);
+            }
+            return files;
+        }
+
+        private void SetAllCheckboxes(bool value)
+        {
+            foreach (DataGridViewRow row in dgvPreview.Rows)
+            {
+                row.Cells["Select"].Value = value;
+            }
+            dgvPreview.RefreshEdit();
+        }
+
         private void BtnPreview_Click(object? sender, EventArgs e)
         {
             if (string.IsNullOrEmpty(txtFolderPath.Text))
@@ -299,21 +365,18 @@ namespace DesktopKit.FolderRename
                 return;
             }
 
-            var files = GetCurrentFileList();
-            if (files.Count == 0)
+            var checkedFiles = GetCheckedFileList();
+            if (checkedFiles.Count == 0)
             {
-                MessageBox.Show("対象ファイルがありません。", "確認", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("対象ファイルが選択されていません。", "確認", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
+            List<(string oldName, string newName)> plan;
+
             if (rbWordSequence.Checked)
             {
-                if (string.IsNullOrEmpty(txtPrefix.Text))
-                {
-                    MessageBox.Show("接頭辞を入力してください。", "確認", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    return;
-                }
-                _currentPlan = _engine.PreviewSequence(files, txtPrefix.Text, (int)nudStart.Value, (int)nudDigits.Value);
+                plan = _engine.PreviewSequence(checkedFiles, txtPrefix.Text, (int)nudStart.Value, (int)nudDigits.Value);
             }
             else
             {
@@ -322,17 +385,44 @@ namespace DesktopKit.FolderRename
                     MessageBox.Show("検索文字列を入力してください。", "確認", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     return;
                 }
-                _currentPlan = _engine.PreviewReplace(files, txtSearch.Text, txtReplaceWith.Text);
+                plan = _engine.PreviewReplace(checkedFiles, txtSearch.Text, txtReplaceWith.Text);
             }
 
-            for (int i = 0; i < _currentPlan.Count; i++)
+            // 重複チェック（改修C）
+            var uncheckedFiles = GetUncheckedFileList();
+            var duplicates = _engine.FindDuplicates(plan, uncheckedFiles);
+            if (duplicates.Count > 0)
             {
-                dgvPreview.Rows[i].Cells["After"].Value = _currentPlan[i].newName;
+                string dupList = string.Join("\n", duplicates.Select(d => $"  {d.newName}"));
+                MessageBox.Show(
+                    $"以下のリネーム先ファイル名が既存ファイルと重複しています：\n\n{dupList}\n\n設定を変更してください。",
+                    "重複エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            // プレビュー結果をDataGridViewに反映
+            // まず全行のAfter列をクリア
+            foreach (DataGridViewRow row in dgvPreview.Rows)
+            {
+                row.Cells["After"].Value = "";
+            }
+
+            // チェック済み行にのみリネーム後ファイル名を表示
+            int planIndex = 0;
+            foreach (DataGridViewRow row in dgvPreview.Rows)
+            {
+                bool isChecked = row.Cells["Select"].Value is true;
+                if (isChecked && planIndex < plan.Count)
+                {
+                    row.Cells["After"].Value = plan[planIndex].newName;
+                    planIndex++;
+                }
             }
 
             _previewShown = true;
+            _currentPlan = plan;
             btnExecute.Enabled = true;
-            StatusHelper.ShowInfo(StatusLabel, $"{_currentPlan.Count}件のリネームをプレビュー中");
+            StatusHelper.ShowInfo(StatusLabel, $"{plan.Count}件のリネームをプレビュー中");
         }
 
         private void BtnExecute_Click(object? sender, EventArgs e)
@@ -358,17 +448,12 @@ namespace DesktopKit.FolderRename
                 Application.DoEvents();
             });
 
-            // 完了後: 変更前列を新しいファイル名に更新
-            for (int i = 0; i < _currentPlan.Count; i++)
-            {
-                dgvPreview.Rows[i].Cells["Before"].Value = _currentPlan[i].newName;
-                dgvPreview.Rows[i].Cells["After"].Value = "";
-            }
-
+            // 完了後: ファイル一覧を再読み込みして最新状態を反映
             _previewShown = false;
             _currentPlan = null;
             btnExecute.Enabled = false;
             btnUndo.Enabled = true;
+            LoadFileList();
             StatusHelper.ShowSuccess(StatusLabel, $"{renameCount}件のリネームが完了しました");
         }
 
