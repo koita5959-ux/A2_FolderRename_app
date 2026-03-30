@@ -17,7 +17,6 @@ UninstallDisplayIcon={app}\FolderRename.ico
 
 [Files]
 Source: "publish\DesktopKit.FolderRename.exe"; DestDir: "{app}"; DestName: "FolderRename.exe"; Flags: ignoreversion
-Source: "publish\*.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "ご利用ガイド.txt"; DestDir: "{app}"; Flags: ignoreversion
 Source: "_works\FolderRename.ico"; DestDir: "{app}"; Flags: ignoreversion
 ; pdbは含めない

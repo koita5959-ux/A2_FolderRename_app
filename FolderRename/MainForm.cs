@@ -231,6 +231,9 @@ namespace DesktopKit.FolderRename
             Controls.Add(previewPanel);
             Controls.Add(topPanel);
             Controls.Add(bottomPanel);
+
+            // StatusBar（リサイズグリップ）をウィンドウ最下層に配置
+            StatusBar.SendToBack();
         }
 
         private void CenterBottomButtons(Panel panel)
