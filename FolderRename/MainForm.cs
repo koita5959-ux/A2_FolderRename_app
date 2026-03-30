@@ -69,7 +69,7 @@ namespace DesktopKit.FolderRename
             {
                 ReadOnly = true,
                 Location = new Point(140, 10),
-                Size = new Size(620, 23),
+                Size = new Size(topPanel.ClientSize.Width - 140 - 20, 23),
                 Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
             };
 
